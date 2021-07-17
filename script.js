@@ -57,8 +57,11 @@ class App {
     #coords = [];
     #map = null;
 
+    #STORAGE_KEY = 'workouts';
+
     constructor() {
         this._getPosition();
+        this._getStorageWorkouts();
 
         // Event listeners
         inpType.addEventListener('change', this._toggleWorkoutType);
@@ -88,6 +91,12 @@ class App {
         this.#map.on('click', e => {
             this.#coords = [e.latlng.lat, e.latlng.lng];
             this._showForm();
+        });
+
+        // Render workouts from localstorage once map is loaded
+        this.#workouts.forEach(workout => {
+            this._renderOnList(workout);
+            this._renderOnMap(workout);
         });
     }
 
@@ -143,6 +152,7 @@ class App {
         }
 
         this.#workouts.push(workout);
+        this._saveWorkoutsToStorage();
 
         this._renderOnList(workout);
         this._renderOnMap(workout);
@@ -229,6 +239,16 @@ class App {
                 }`
             )
             .openPopup();
+    }
+
+    _saveWorkoutsToStorage() {
+        localStorage.setItem(this.#STORAGE_KEY, JSON.stringify(this.#workouts));
+    }
+
+    _getStorageWorkouts() {
+        const workouts = JSON.parse(localStorage.getItem(this.#STORAGE_KEY));
+        if (!workouts) return;
+        this.#workouts = workouts;
     }
 }
 
