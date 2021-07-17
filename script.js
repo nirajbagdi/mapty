@@ -68,6 +68,7 @@ class App {
         inpType.addEventListener('change', this._toggleWorkoutType);
         form.addEventListener('submit', this._newWorkout.bind(this));
         workouts.addEventListener('click', this._moveMap.bind(this));
+        workouts.addEventListener('click', this._deleteWorkout.bind(this));
     }
 
     _getPosition() {
@@ -169,6 +170,7 @@ class App {
         let markup = `
             <li class="workout workout--${workout.type}" data-id="${workout.id}">
                 <h2 class="workout__title">${workout.description}</h2>
+                <button class="btn btn-delete">Delete</button>
 
                 <div class="workout__details">
                     <span class="workout__icon">
@@ -263,6 +265,30 @@ class App {
             animate: true,
             pan: { duration: 1 }
         });
+    }
+
+    _deleteWorkout(e) {
+        if (e.target.classList.contains('btn-delete')) {
+            const element = e.target.closest('.workout');
+            const workout = this.#workouts.find(
+                w => w.id === element.dataset.id
+            );
+            const index = this.#workouts.indexOf(workout);
+
+            this.#workouts.splice(index, 1); // Remove from array
+            element.remove(); // Remove from list
+
+            // Remove from map (marker)
+            // prettier-ignore
+            this.#map.eachLayer(layer => {
+                if (
+                    layer._latlng?.lat === workout.coords[0] &&
+                    layer._latlng?.lng === workout.coords[1]
+                ) this.#map.removeLayer(layer);
+            });
+
+            this._saveWorkoutsToStorage();
+        }
     }
 }
 
