@@ -58,6 +58,7 @@ class App {
     #map = null;
 
     #STORAGE_KEY = 'workouts';
+    #MAP_ZOOM_LEVEL = 13;
 
     constructor() {
         this._getPosition();
@@ -66,6 +67,7 @@ class App {
         // Event listeners
         inpType.addEventListener('change', this._toggleWorkoutType);
         form.addEventListener('submit', this._newWorkout.bind(this));
+        workouts.addEventListener('click', this._moveMap.bind(this));
     }
 
     _getPosition() {
@@ -81,7 +83,7 @@ class App {
     }
 
     _loadMap(coords) {
-        this.#map = L.map('map').setView(coords, 13);
+        this.#map = L.map('map').setView(coords, this.#MAP_ZOOM_LEVEL);
 
         L.tileLayer(
             'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
@@ -250,9 +252,22 @@ class App {
         if (!workouts) return;
         this.#workouts = workouts;
     }
+
+    _moveMap(e) {
+        const list = e.target.closest('.workout');
+        if (!list) return;
+
+        const workout = this.#workouts.find(w => w.id === list.dataset.id);
+
+        this.#map.setView(workout.coords, this.#MAP_ZOOM_LEVEL, {
+            animate: true,
+            pan: { duration: 1 }
+        });
+    }
 }
 
 const form = document.querySelector('.form');
+const workouts = document.querySelector('.workouts');
 
 const inpDistance = document.querySelector('.form__input--distance');
 const inpDuration = document.querySelector('.form__input--duration');
