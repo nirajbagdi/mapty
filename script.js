@@ -66,15 +66,29 @@ class App {
         this._getPosition();
         this._getStorageWorkouts();
 
-        // Event listeners
+        // Switch between workout types (running | cycling)
         inpType.addEventListener('change', e =>
             this._toggleWorkoutType(e.target.value)
         );
 
+        // When a workout is created or edited
         form.addEventListener('submit', this._newWorkout.bind(this));
-        workouts.addEventListener('click', this._moveMap.bind(this));
-        workouts.addEventListener('click', this._deleteWorkout.bind(this));
-        workouts.addEventListener('click', this._editWorkout.bind(this));
+
+        // For performing actions on the workout (edit, delete)
+        workouts.addEventListener('click', e => {
+            const workoutEl = e.target.closest('.workout');
+            if (!workoutEl) return;
+
+            const workout = this.#workouts.find(
+                w => w.id === workoutEl.dataset.id
+            );
+
+            if (workoutEl) this._moveMap(workout.coords);
+            if (e.target.classList.contains('btn-edit'))
+                this._editWorkout(workout);
+            if (e.target.classList.contains('btn-delete'))
+                this._deleteWorkout(workout, workoutEl);
+        });
     }
 
     _getPosition() {
@@ -302,62 +316,46 @@ class App {
         this.#workouts = workouts;
     }
 
-    _moveMap(e) {
-        const list = e.target.closest('.workout');
-        if (!list) return;
-
-        const workout = this.#workouts.find(w => w.id === list.dataset.id);
-
-        this.#map.setView(workout.coords, this.#MAP_ZOOM_LEVEL, {
+    _moveMap(coords) {
+        this.#map.setView(coords, this.#MAP_ZOOM_LEVEL, {
             animate: true,
             pan: { duration: 1 }
         });
     }
 
-    _deleteWorkout(e) {
-        if (e.target.classList.contains('btn-delete')) {
-            const element = e.target.closest('.workout');
-            const workout = this.#workouts.find(
-                w => w.id === element.dataset.id
-            );
-            const index = this.#workouts.indexOf(workout);
+    _deleteWorkout(workout, element) {
+        const index = this.#workouts.indexOf(workout);
 
-            this.#workouts.splice(index, 1); // Remove from array
-            element.remove(); // Remove from list
+        this.#workouts.splice(index, 1); // Remove from array
+        element.remove(); // Remove from list
 
-            // Remove from map (marker)
-            // prettier-ignore
-            this.#map.eachLayer(layer => {
-                if (
-                    layer._latlng?.lat === workout.coords[0] &&
-                    layer._latlng?.lng === workout.coords[1]
-                ) this.#map.removeLayer(layer);
-            });
-
+        // Remove from map (marker)
+        this.#map.eachLayer(layer => {
+            if (
+                layer._latlng?.lat === workout.coords[0] &&
+                layer._latlng?.lng === workout.coords[1]
+            )
+                this.#map.removeLayer(layer);
             this._saveWorkoutsToStorage();
-        }
+        });
     }
 
-    _editWorkout(e) {
-        if (e.target.classList.contains('btn-edit')) {
-            const workoutEl = e.target.closest('.workout');
+    _editWorkout(workout) {
+        this.#isEditing = true;
+        this.#editingWorkout = workout;
 
-            this.#editingWorkout = this.#workouts.find(
-                w => w.id === workoutEl.dataset.id
-            );
+        this._showForm();
+        this._toggleWorkoutType(workout.type);
 
-            this.#isEditing = true;
-            this._showForm();
-            this._toggleWorkoutType(this.#editingWorkout.type);
+        // Disables changing workout type while editing
+        inpType.disabled = true;
 
-            inpType.value = this.#editingWorkout.type;
-            inpDistance.value = this.#editingWorkout.distance;
-            inpDuration.value = this.#editingWorkout.duration;
-            inpCadence.value = this.#editingWorkout.cadence;
-            inpElevation.value = this.#editingWorkout.elevationGain;
-
-            inpType.disabled = true;
-        }
+        // Set values to the editing workout values
+        inpType.value = workout.type;
+        inpDistance.value = workout.distance;
+        inpDuration.value = workout.duration;
+        inpCadence.value = workout.cadence;
+        inpElevation.value = workout.elevationGain;
     }
 }
 
