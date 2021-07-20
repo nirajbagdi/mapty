@@ -89,6 +89,25 @@ class App {
             if (e.target.classList.contains('btn-delete'))
                 this._deleteWorkout(workout, workoutEl);
         });
+
+        // Delete all workouts
+        btnDeleteAll.addEventListener(
+            'click',
+            this._deleteAllWorkouts.bind(this)
+        );
+    }
+
+    _deleteAllWorkouts() {
+        this.#workouts = [];
+        localStorage.removeItem(this.#STORAGE_KEY);
+
+        // remove list workouts
+        document.querySelectorAll('.workout').forEach(el => el.remove());
+
+        // remove markers
+        this.#map.eachLayer(layer => {
+            if (layer._latlng) this.#map.removeLayer(layer);
+        });
     }
 
     _getPosition() {
@@ -361,6 +380,8 @@ class App {
 
 const form = document.querySelector('.form');
 const workouts = document.querySelector('.workouts');
+
+const btnDeleteAll = document.querySelector('.btn-deleteall');
 
 const inpDistance = document.querySelector('.form__input--distance');
 const inpDuration = document.querySelector('.form__input--duration');

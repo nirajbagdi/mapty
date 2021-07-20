@@ -233,3 +233,10 @@ a:visited {
     right: 77px;
     padding: 2px 8px;
 }
+
+.btn-deleteall {
+    position: absolute;
+    left: 80px;
+    bottom: 120px;
+    padding:5px;
+}
