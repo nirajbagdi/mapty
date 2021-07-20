@@ -226,3 +226,10 @@ a:visited {
     right: 15px;
     padding: 2px 8px;
 }
+
+.btn-edit {
+    position: absolute;
+    top: 15px;
+    right: 77px;
+    padding: 2px 8px;
+}

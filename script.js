@@ -56,6 +56,8 @@ class App {
     #workouts = [];
     #coords = [];
     #map = null;
+    #editingWorkout = null;
+    #isEditing = false;
 
     #STORAGE_KEY = 'workouts';
     #MAP_ZOOM_LEVEL = 13;
@@ -65,10 +67,14 @@ class App {
         this._getStorageWorkouts();
 
         // Event listeners
-        inpType.addEventListener('change', this._toggleWorkoutType);
+        inpType.addEventListener('change', e =>
+            this._toggleWorkoutType(e.target.value)
+        );
+
         form.addEventListener('submit', this._newWorkout.bind(this));
         workouts.addEventListener('click', this._moveMap.bind(this));
         workouts.addEventListener('click', this._deleteWorkout.bind(this));
+        workouts.addEventListener('click', this._editWorkout.bind(this));
     }
 
     _getPosition() {
@@ -116,11 +122,22 @@ class App {
         inpDuration.value = '';
         inpCadence.value = '';
         inpElevation.value = '';
+
+        inpType.disabled = false;
+        this._toggleWorkoutType(inpType.value);
     }
 
-    _toggleWorkoutType() {
-        inpElevation.closest('.form__row').classList.toggle('hidden');
-        inpCadence.closest('.form__row').classList.toggle('hidden');
+    _toggleWorkoutType(type) {
+        const formRunning = inpCadence.closest('.form__row');
+        const formCycling = inpElevation.closest('.form__row');
+
+        if (type === 'running') {
+            formRunning.classList.remove('hidden');
+            formCycling.classList.add('hidden');
+        } else if (type === 'cycling') {
+            formRunning.classList.add('hidden');
+            formCycling.classList.remove('hidden');
+        }
     }
 
     _newWorkout(e) {
@@ -134,6 +151,10 @@ class App {
 
         let workout = {};
 
+        const coords = this.#editingWorkout
+            ? this.#editingWorkout.coords
+            : this.#coords;
+
         // prettier-ignore
         if (type === 'running') {
             if (
@@ -141,7 +162,7 @@ class App {
                 !allPositive(distance, duration, cadence)
             ) return alert('Inputs have to be positive numbers...');
 
-            workout = new Running(this.#coords, distance, duration, cadence);
+            workout = new Running(coords, distance, duration, cadence);
         }
 
         // prettier-ignore
@@ -151,18 +172,43 @@ class App {
                 !allPositive(distance, duration)
             ) return alert('Inputs have to be positive numbers...');
 
-            workout = new Cycling(this.#coords, distance, duration, elevationGain);
+            workout = new Cycling(coords, distance, duration, elevationGain);
         }
 
-        this.#workouts.push(workout);
-        this._saveWorkoutsToStorage();
+        if (this.#isEditing) {
+            // Edit workout
+            this.#workouts = this.#workouts.map(w => {
+                if (w.id === this.#editingWorkout.id) w = workout;
+                return w;
+            });
 
-        this._renderOnList(workout);
-        this._renderOnMap(workout);
+            const markup = this._generateWorkoutMarkup(workout);
+
+            const workoutEl = document.querySelector(
+                `[data-id="${this.#editingWorkout.id}"]`
+            );
+
+            const newWorkoutEl = document.createElement('div');
+            newWorkoutEl.innerHTML = markup;
+
+            workoutEl.parentNode.replaceChild(
+                newWorkoutEl.children[0],
+                workoutEl
+            );
+        } else {
+            // Add workout
+            this.#workouts.push(workout);
+            this._renderOnList(workout);
+            this._renderOnMap(workout);
+        }
+
+        this._saveWorkoutsToStorage();
+        this._hideForm();
 
         // Reset to defaults
-        this._hideForm();
         this.#coords = [];
+        this.#editingWorkout = null;
+        this.#isEditing = false;
     }
 
     // prettier-ignore
@@ -171,6 +217,7 @@ class App {
             <li class="workout workout--${workout.type}" data-id="${workout.id}">
                 <h2 class="workout__title">${workout.description}</h2>
                 <button class="btn btn-delete">Delete</button>
+                <button class="btn btn-edit">Edit</button>
 
                 <div class="workout__details">
                     <span class="workout__icon">
@@ -288,6 +335,28 @@ class App {
             });
 
             this._saveWorkoutsToStorage();
+        }
+    }
+
+    _editWorkout(e) {
+        if (e.target.classList.contains('btn-edit')) {
+            const workoutEl = e.target.closest('.workout');
+
+            this.#editingWorkout = this.#workouts.find(
+                w => w.id === workoutEl.dataset.id
+            );
+
+            this.#isEditing = true;
+            this._showForm();
+            this._toggleWorkoutType(this.#editingWorkout.type);
+
+            inpType.value = this.#editingWorkout.type;
+            inpDistance.value = this.#editingWorkout.distance;
+            inpDuration.value = this.#editingWorkout.duration;
+            inpCadence.value = this.#editingWorkout.cadence;
+            inpElevation.value = this.#editingWorkout.elevationGain;
+
+            inpType.disabled = true;
         }
     }
 }
